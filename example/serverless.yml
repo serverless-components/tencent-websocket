@@ -1,0 +1,17 @@
+MySocket:
+  component: ../
+  inputs:
+    region: ap-guangzhou
+    functionName: websocket-function
+    code: ./
+    functionConf:
+      timeout: 10
+      memorySize: 128
+      environment:
+        variables:
+          TEST: abc
+    apigatewayConf:
+      serviceId: service-avclxib2
+      protocols:
+        - https
+      environment: release
