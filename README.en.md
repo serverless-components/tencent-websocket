@@ -1,6 +1,10 @@
 # Tencent Websocket Serverless Component
 
+[![Serverless Websocket Tencent Cloud](https://img.serverlesscloud.cn/2020210/1581351457765-WebSocket_%E9%95%BF.png)](http://serverless.com)
+
 [简体中文](https://github.com/serverless-components/tencent-websocket/README.md) | English
+
+&nbsp;
 
 ## Introduction
 
