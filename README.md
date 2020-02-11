@@ -2,7 +2,7 @@
 
 [![Serverless Websocket Tencent Cloud](https://img.serverlesscloud.cn/2020210/1581351457765-WebSocket_%E9%95%BF.png)](http://serverless.com)
 
-简体中文 | [English](./README.en.md)
+简体中文 | [English](https://github.com/serverless-components/tencent-websocket/tree/master/README.en.md)
 
 &nbsp;
 
