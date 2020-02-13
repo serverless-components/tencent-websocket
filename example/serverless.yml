@@ -1,5 +1,5 @@
 MySocket:
-  component: ../
+  component: '@serverless/tencent-websocket'
   inputs:
     region: ap-guangzhou
     functionName: websocket-function
