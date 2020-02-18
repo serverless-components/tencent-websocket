@@ -86,7 +86,8 @@ class TencentWebsocket extends Component {
             cleanupFunctionName: tencentCloudFunctionOutputs.Name
           }
         }
-      ]
+      ],
+      customDomain: inputs.apigatewayConf.customDomain
     }
 
     if (inputs.apigatewayConf && inputs.apigatewayConf.auth) {
@@ -108,6 +109,10 @@ class TencentWebsocket extends Component {
         tencentApiGatewayOutputs.environment
       }/`,
       wsBackUrl: wsBackUrl
+    }
+
+    if (tencentApiGatewayOutputs.customDomains) {
+      outputs.customDomains = tencentApiGatewayOutputs.customDomains
     }
 
     // after websocket api create, we should add wsBackUrl environment for cloud function
