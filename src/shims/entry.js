@@ -17,13 +17,13 @@ const isJson = (body) => {
   return true
 }
 
-async function request(event, data = '') {
+async function request(event, data = '', id = '') {
   const { websocket } = event
   const { action, secConnectionID, secWebSocketProtocol, secWebSocketExtensions } = websocket
   const retmsg = {
     websocket: {
       action: action,
-      secConnectionID: secConnectionID,
+      secConnectionID: id ? id : secConnectionID,
       dataType: 'text',
       data: data
     }
@@ -94,16 +94,13 @@ module.exports.socket = (event) => {
     const socket = {
       id: secConnectionID,
       event: event,
-      send: async (sendData) => {
-        return request(event, sendData)
+      send: async (sendData, id) => {
+        return request(event, sendData, id)
       }
     }
     // we can make an exception for this single case
     // for the sake of UX
     global.on = async (route, fn) => {
-      console.log('route', route)
-      console.log('EventMaps', EventMaps)
-
       route = EventMaps[route]
       if (!route) {
         throw new Error(`Unknow event: ${route}`)
