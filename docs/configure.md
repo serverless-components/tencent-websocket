@@ -23,6 +23,7 @@ socket:
         subnetId: ''
         vpcId: ''
     apigatewayConf:
+      serviceTimeout: 3
       customDomain:
         - domain: abc.com
           certificateId: abcdefg
@@ -87,13 +88,14 @@ Main param description
 
 ### apigatewayConf param description
 
-| Param        | Required/Optional | Description                                                                                              |
-| ------------ | :---------------: | :------------------------------------------------------------------------------------------------------- |
-| protocols    |     Optional      | Frontend request type of the service, such as HTTP, HTTPS, HTTP and HTTPS.                               |
-| environment  |     Optional      | The name of the environment to be published. Three environments are supported: test, prepub and release. |
-| usagePlan    |     Optional      |                                                                                                          |
-| auth         |     Optional      |                                                                                                          |
-| customDomain |     Optional      | Custom API Domain                                                                                        |
+| Param          | Required/Optional | Description                                                                                              |
+| -------------- | :---------------: | :------------------------------------------------------------------------------------------------------- |
+| protocols      |     Optional      | Frontend request type of the service, such as HTTP, HTTPS, HTTP and HTTPS.                               |
+| environment    |     Optional      | The name of the environment to be published. Three environments are supported: test, prepub and release. |
+| usagePlan      |     Optional      |                                                                                                          |
+| auth           |     Optional      |                                                                                                          |
+| customDomain   |     Optional      | Custom API Domain                                                                                        |
+| serviceTimeout |     Optional      | Backend service timeout, range 3 to 1800 seconds. Default: 3 second                                      |
 
 - usagePlan param description
 

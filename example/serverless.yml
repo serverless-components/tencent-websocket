@@ -1,5 +1,6 @@
 MySocket:
-  component: '@serverless/tencent-websocket'
+  # component: '@serverless/tencent-websocket'
+  component: ../
   inputs:
     region: ap-guangzhou
     functionName: websocket-function
@@ -12,6 +13,7 @@ MySocket:
           TEST: abc
     apigatewayConf:
       serviceId: service-avclxib2
+      serviceTimeout: 30
       protocols:
         - https
       environment: release

@@ -76,6 +76,7 @@ class TencentWebsocket extends Component {
       endpoints: [
         {
           path: '/',
+          serviceTimeout: inputs.apigatewayConf.serviceTimeout || 3,
           protocol: 'WEBSOCKET',
           method: 'GET',
           function: {
