@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.2](https://github.com/serverless-components/tencent-websocket/compare/v0.2.1...v0.2.2) (2020-03-02)
+
+### Bug Fixes
+
+- add send to id support ([341a1c6](https://github.com/serverless-components/tencent-websocket/commit/341a1c65118e145642cfeedbf5c044bcbe269623))
+
 ### [0.2.1](https://github.com/serverless-components/tencent-websocket/compare/v0.2.0...v0.2.1) (2020-02-27)
 
 ### Bug Fixes
