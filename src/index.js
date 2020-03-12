@@ -30,7 +30,7 @@ class TencentWebsocket extends Component {
       `SocketComponent_${random({ length: 6 })}`
     inputs.codeUri = ensureString(inputs.code, { isOptional: true }) || process.cwd()
     inputs.region = ensureString(inputs.region, { default: 'ap-guangzhou' })
-
+    inputs.namespace = ensureString(inputs.namespace, { default: 'default' })
     inputs.include = ensureIterable(inputs.include, { default: [] })
     inputs.include = inputs.include.concat([path.join(__dirname, 'shims')])
     inputs.exclude = ensureIterable(inputs.exclude, { default: [] })
@@ -82,6 +82,7 @@ class TencentWebsocket extends Component {
           function: {
             isIntegratedResponse: false,
             functionName: tencentCloudFunctionOutputs.Name,
+            functionNamespace: inputs.namespace,
             transportFunctionName: tencentCloudFunctionOutputs.Name,
             registerFunctionName: tencentCloudFunctionOutputs.Name,
             cleanupFunctionName: tencentCloudFunctionOutputs.Name
