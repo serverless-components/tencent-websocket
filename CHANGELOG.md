@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.3](https://github.com/serverless-components/tencent-websocket/compare/v0.2.2...v0.2.3) (2020-03-12)
+
+### Bug Fixes
+
+- add websocket service timeout option ([3a1ab78](https://github.com/serverless-components/tencent-websocket/commit/3a1ab781bd906f9ea5a281b7c76038716ea9aa30))
+- apigw namespace ([5f6a116](https://github.com/serverless-components/tencent-websocket/commit/5f6a11668169a0aa17e8b0efdc044dbf5cfda93d))
+
 ### [0.2.2](https://github.com/serverless-components/tencent-websocket/compare/v0.2.1...v0.2.2) (2020-03-02)
 
 ### Bug Fixes
