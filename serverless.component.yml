@@ -1,0 +1,10 @@
+name: websocket
+version: 0.3.0
+author: Tencent Cloud, Inc.
+org: Tencent Cloud, Inc.
+description: Deploys websocket service on Tencent Cloud.
+keywords: tencent, serverless, websocket
+repo: https://github.com/serverless-components/tencent-websocket
+readme: https://github.com/serverless-components/tencent-websocket/tree/master/README.md
+license: MIT
+main: ./src

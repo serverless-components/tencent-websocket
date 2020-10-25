@@ -2,10 +2,6 @@
 
 # 腾讯云 Websocket Serverless Component
 
-简体中文 | [English](https://github.com/serverless-components/tencent-websocket/tree/master/README.en.md)
-
-&nbsp;
-
 ## 简介
 
 腾讯云 Websocket Serverless Component。
@@ -57,7 +53,7 @@ For a real world example of how the `app.js` file could be used, take a look at 
 
 通过 npm 全局安装 [serverless cli](https://github.com/serverless/serverless)
 
-```shell
+```bash
 $ npm install -g serverless
 ```
 
@@ -65,52 +61,52 @@ $ npm install -g serverless
 
 在项目根目录，创建 `serverless.yml` 文件，在其中进行如下配置
 
-```shell
+```bash
 $ touch serverless.yml
 ```
 
 ```yml
 # serverless.yml
 
-MyComponent:
-  component: '@serverless/tencent-websocket'
-  inputs:
-    region: ap-guangzhou
-    functionName: websocket-function
-    code: ./
-    functionConf:
-      timeout: 10
-      memorySize: 128
-      environment:
-        variables:
-          TEST: vale
-      vpcConfig:
-        subnetId: ''
-        vpcId: ''
-    apigatewayConf:
-      protocol: https
-      environment: release
+app: appDemo
+stage: dev
+
+component: websocket@dev
+name: websocketDemo
+
+inputs:
+  region: ap-guangzhou
+  functionName: websocket-function
+  src:
+    src: ./
+    exclude:
+      - .env
+  faas:
+    timeout: 10
+  apigw:
+    serviceTimeout: 30
+    environment: release
+    protocols:
+      - https
 ```
 
 - [更多配置](https://github.com/serverless-components/tencent-websocket/tree/master/docs/configure.md)
 
 ### 4. 部署
 
-如您的账号未 [登陆](https://cloud.tencent.com/login) 或 [注册](https://cloud.tencent.com/register) 腾讯云，您可以直接通过 `微信` 扫描命令行中的二维码进行授权登陆和注册。
+如您的账号未 [登录](https://cloud.tencent.com/login) 或 [注册](https://cloud.tencent.com/register) 腾讯云，您可以直接通过 `微信` 扫描命令行中的二维码进行授权登陆和注册。
 
 通过 `sls` 命令进行部署，并可以添加 `--debug` 参数查看部署过程中的信息
 
-```shell
+```bash
 $ sls --debug
 ```
-
-> 注意: `sls` 是 `serverless` 命令的简写。
 
 ### 5. 移除
 
 通过以下命令移除部署的 API 网关
 
-```shell
+```bash
 $ sls remove --debug
 ```
 
@@ -130,6 +126,12 @@ TENCENT_SECRET_ID=123
 TENCENT_SECRET_KEY=123
 ```
 
-### 更多组件
+## 更多组件
 
 可以在 [Serverless Components](https://github.com/serverless/components) repo 中查询更多组件的信息。
+
+## License
+
+MIT License
+
+Copyright (c) 2020 Tencent Cloud, Inc.

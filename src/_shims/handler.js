@@ -1,3 +1,4 @@
+const path = require('path')
 const http = require('http')
 const url = require('url')
 
@@ -74,7 +75,7 @@ async function request(event, data = '', id = '') {
   })
 }
 
-module.exports.socket = (event) => {
+module.exports.handler = (event) => {
   const { websocket } = event
   const { secConnectionID, action, data } = websocket
 
@@ -122,7 +123,8 @@ module.exports.socket = (event) => {
       }
     }
 
-    delete require.cache[require.resolve('./app')] // clear cache from previous require
-    require('./app.js')
+    const entryFile = path.join(__dirname, process.env.SLS_ENTRY_FILE)
+    delete require.cache[require.resolve(entryFile)]
+    require(entryFile)
   })
 }

@@ -1,18 +1,20 @@
-MySocket:
-  component: '@serverless/tencent-websocket'
-  inputs:
-    region: ap-guangzhou
-    functionName: websocket-function
-    code: ./
-    functionConf:
-      timeout: 10
-      memorySize: 128
-      environment:
-        variables:
-          TEST: abc
-    apigatewayConf:
-      serviceId: service-avclxib2
-      serviceTimeout: 30
-      protocols:
-        - https
-      environment: release
+app: appDemo
+stage: dev
+
+component: websocket@dev
+name: websocketDemo
+
+inputs:
+  region: ap-guangzhou
+  functionName: websocket-function
+  src:
+    src: ./
+    exclude:
+      - .env
+  faas:
+    timeout: 10
+  apigw:
+    serviceTimeout: 30
+    environment: release
+    protocols:
+      - https
