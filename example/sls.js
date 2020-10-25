@@ -16,14 +16,16 @@ on('disconnect', async (data, socket) => {
   return 'closed'
 })
 
-
 /**
  * Message
  */
 on('message', async (data, socket) => {
   console.log('message', socket, data)
   console.log('sending to: ', socket.id)
-  await socket.send(JSON.stringify({status: 'sending data', data: data || 'hello websocket'}), socket.id)
+  await socket.send(
+    JSON.stringify({ status: 'sending data', data: data || 'hello websocket' }),
+    socket.id
+  )
 })
 
 /**
@@ -32,5 +34,8 @@ on('message', async (data, socket) => {
 on('default', async (data, socket) => {
   console.log('message', socket, data)
   console.log('sending to: ', socket.id)
-  await socket.send(JSON.stringify({status: 'sending default data', data: data || 'hello websocket'}), socket.id)
+  await socket.send(
+    JSON.stringify({ status: 'sending default data', data: data || 'hello websocket' }),
+    socket.id
+  )
 })
