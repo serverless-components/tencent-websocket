@@ -193,7 +193,7 @@ const prepareInputs = async (instance, credentials, inputs = {}) => {
       bucket: inputs.srcOriginal && inputs.srcOriginal.bucket,
       object: inputs.srcOriginal && inputs.srcOriginal.object
     },
-    name: stateFunctionName || getDefaultFunctionName(),
+    name: tempFaasConfig.name || stateFunctionName || getDefaultFunctionName(),
     region: regionList,
     role: tempFaasConfig.role || '',
     handler: tempFaasConfig.handler || CONFIGS.handler,
