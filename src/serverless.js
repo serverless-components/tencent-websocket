@@ -206,9 +206,6 @@ class ServerlessComponent extends Component {
     const [faasOutputs, apigwOutputs = {}] = await Promise.all(deployTasks)
     const { wsBackUrl } = apigwOutputs[regionList[0]]
 
-    this.state.wsBackUrl = wsBackUrl
-    outputs.wsBackUrl = wsBackUrl
-
     await this.updateFaas(credentials, faasConfig, regionList, wsBackUrl)
 
     // optimize outputs for one region
@@ -216,10 +213,10 @@ class ServerlessComponent extends Component {
       const [oneRegion] = regionList
       outputs.region = oneRegion
       outputs['apigw'] = apigwOutputs[oneRegion]
-      outputs['scf'] = faasOutputs[oneRegion]
+      outputs['faas'] = faasOutputs[oneRegion]
     } else {
       outputs['apigw'] = apigwOutputs
-      outputs['scf'] = faasOutputs
+      outputs['faas'] = faasOutputs
     }
 
     this.state.region = regionList[0]
