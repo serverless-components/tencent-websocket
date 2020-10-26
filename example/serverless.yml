@@ -6,12 +6,12 @@ name: websocketDemo
 
 inputs:
   region: ap-guangzhou
-  functionName: websocket-function
   src:
     src: ./
     exclude:
       - .env
   faas:
+    name: websocket-function
     timeout: 10
   apigw:
     serviceTimeout: 30
