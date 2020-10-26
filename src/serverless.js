@@ -39,7 +39,7 @@ class ServerlessComponent extends Component {
       }
       const scfOutput = await scf.deploy(deepClone(tempInputs))
       outputs[curRegion] = {
-        functionName: scfOutput.FunctionName,
+        name: scfOutput.FunctionName,
         runtime: scfOutput.Runtime,
         namespace: scfOutput.Namespace
       }
@@ -242,7 +242,7 @@ class ServerlessComponent extends Component {
       const apigw = new Apigw(credentials, curRegion)
       const handler = async () => {
         await scf.remove({
-          functionName: curState.functionName,
+          functionName: curState.name,
           namespace: curState.namespace
         })
         // if disable apigw, no need to remove

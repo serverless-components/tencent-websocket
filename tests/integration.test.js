@@ -18,7 +18,7 @@ const instanceYaml = {
       exclude: [ '.env' ],
     },
     region: 'ap-guangzhou',
-    faas: { runtime: 'Nodejs10.15' },
+    faas: { name: `websocket-test`, runtime: 'Nodejs10.15' },
     apigw: { environment: 'test' }
   }
 }
@@ -42,8 +42,9 @@ it('should successfully deploy websocket app', async () => {
   expect(instance.outputs.region).toEqual(instanceYaml.inputs.region)
   expect(instance.outputs.apigw).toBeDefined()
   expect(instance.outputs.apigw.environment).toEqual(instanceYaml.inputs.apigw.environment)
-  expect(instance.outputs.scf).toBeDefined()
-  expect(instance.outputs.scf.runtime).toEqual(instanceYaml.inputs.faas.runtime)
+  expect(instance.outputs.faas).toBeDefined()
+  expect(instance.outputs.faas.name).toEqual(instanceYaml.inputs.faas.name)
+  expect(instance.outputs.faas.runtime).toEqual(instanceYaml.inputs.faas.runtime)
 })
 
 it('should successfully remove websocket app', async () => {
