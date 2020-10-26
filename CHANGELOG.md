@@ -1,3 +1,11 @@
+## [0.3.2](https://github.com/serverless-components/tencent-websocket/compare/v0.3.1...v0.3.2) (2020-10-26)
+
+
+### Bug Fixes
+
+* faas name config ([36c0ac4](https://github.com/serverless-components/tencent-websocket/commit/36c0ac48ab363d193b080a01faeb4c66c7323194))
+* faas remove name bug ([db151fc](https://github.com/serverless-components/tencent-websocket/commit/db151fc19c5535e39ce7ce3f058f7fba05330c17))
+
 ## [0.3.1](https://github.com/serverless-components/tencent-websocket/compare/v0.3.0...v0.3.1) (2020-10-26)
 
 
