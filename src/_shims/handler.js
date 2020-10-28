@@ -75,7 +75,9 @@ async function request(event, data = '', id = '') {
   })
 }
 
-module.exports.handler = (event) => {
+module.exports.handler = (event, context) => {
+  context.callbackWaitsForEmptyEventLoop = false
+
   const { websocket } = event
   const { secConnectionID, action, data } = websocket
 
