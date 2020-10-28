@@ -1,3 +1,10 @@
+## [0.3.3](https://github.com/serverless-components/tencent-websocket/compare/v0.3.2...v0.3.3) (2020-10-28)
+
+
+### Bug Fixes
+
+* async timeout ([f1d69a0](https://github.com/serverless-components/tencent-websocket/commit/f1d69a00578630ed3f7979a9933d8f3363d49523))
+
 ## [0.3.2](https://github.com/serverless-components/tencent-websocket/compare/v0.3.1...v0.3.2) (2020-10-26)
 
 
