@@ -185,15 +185,14 @@ const prepareInputs = async (instance, credentials, inputs = {}) => {
     : ['ap-guangzhou']
 
   // chenck state function name
-  const stateFunctionName =
-    instance.state[regionList[0]] && instance.state[regionList[0]].functionName
+  const stageFaasName = instance.state[regionList[0]] && instance.state[regionList[0]].name
   const faasConfig = Object.assign(tempFaasConfig, {
     code: {
       src: inputs.src,
       bucket: inputs.srcOriginal && inputs.srcOriginal.bucket,
       object: inputs.srcOriginal && inputs.srcOriginal.object
     },
-    name: tempFaasConfig.name || stateFunctionName || getDefaultFunctionName(),
+    name: tempFaasConfig.name || stageFaasName || getDefaultFunctionName(),
     region: regionList,
     role: tempFaasConfig.role || '',
     handler: tempFaasConfig.handler || CONFIGS.handler,
