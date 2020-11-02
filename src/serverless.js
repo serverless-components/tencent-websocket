@@ -2,7 +2,7 @@ const { Component } = require('@serverless/core')
 const { Scf, Apigw, Cns } = require('tencent-component-toolkit')
 const { TypeError } = require('tencent-component-toolkit/src/utils/error')
 const { uploadCodeToCos, getDefaultProtocol, prepareInputs, deepClone } = require('./utils')
-const CONFIGS = require('./config')
+const initConfigs = require('./config')
 
 class ServerlessComponent extends Component {
   getCredentials() {
@@ -26,57 +26,58 @@ class ServerlessComponent extends Component {
     return this.credentials.tencent.tmpSecrets.appId
   }
 
-  async deployFaas(credentials, inputs, regionList) {
-    const outputs = {}
-    const appId = this.getAppId()
+  initialize(framework = 'websocket') {
+    const CONFIGS = initConfigs(framework)
+    this.CONFIGS = CONFIGS
+    this.framework = framework
+    this.__TmpCredentials = this.getCredentials()
+  }
 
-    const faasDeployer = async (curRegion) => {
-      const code = await uploadCodeToCos(this, appId, credentials, inputs, curRegion)
-      const scf = new Scf(credentials, curRegion)
+  async deployFaas(credentials, inputs) {
+    const appId = this.getAppId()
+    const { region } = inputs
+    const { state } = this
+    const instance = this
+    const funcDeployer = async () => {
+      const code = await uploadCodeToCos(instance, appId, credentials, inputs, region)
+      const scf = new Scf(credentials, region)
       const tempInputs = {
         ...inputs,
         code
       }
       const scfOutput = await scf.deploy(deepClone(tempInputs))
-      outputs[curRegion] = {
+      const outputs = {
         name: scfOutput.FunctionName,
         runtime: scfOutput.Runtime,
         namespace: scfOutput.Namespace
       }
 
-      this.state[curRegion] = {
-        ...(this.state[curRegion] ? this.state[curRegion] : {}),
-        ...outputs[curRegion]
-      }
-
       // default version is $LATEST
-      outputs[curRegion].lastVersion = scfOutput.LastVersion
+      outputs.lastVersion = scfOutput.LastVersion
         ? scfOutput.LastVersion
-        : this.state.lastVersion || '$LATEST'
+        : (state.faas && state.faas.lastVersion) || '$LATEST'
 
       // default traffic is 1.0, it can also be 0, so we should compare to undefined
-      outputs[curRegion].traffic =
+      outputs.traffic =
         scfOutput.Traffic !== undefined
           ? scfOutput.Traffic
-          : this.state.traffic !== undefined
-          ? this.state.traffic
+          : (state.faas && state.faas.traffic) !== undefined
+          ? state.faas.traffic
           : 1
 
-      if (outputs[curRegion].traffic !== 1 && scfOutput.ConfigTrafficVersion) {
-        outputs[curRegion].configTrafficVersion = scfOutput.ConfigTrafficVersion
-        this.state.configTrafficVersion = scfOutput.ConfigTrafficVersion
+      if (outputs.traffic !== 1 && scfOutput.ConfigTrafficVersion) {
+        outputs.configTrafficVersion = scfOutput.ConfigTrafficVersion
       }
 
-      this.state.lastVersion = outputs[curRegion].lastVersion
-      this.state.traffic = outputs[curRegion].traffic
+      return outputs
     }
 
-    for (let i = 0; i < regionList.length; i++) {
-      const curRegion = regionList[i]
-      await faasDeployer(curRegion)
-    }
-    this.save()
-    return outputs
+    const faasOutputs = await funcDeployer(region)
+
+    this.state.faas = faasOutputs
+    await this.save()
+
+    return faasOutputs
   }
 
   // try to add dns record
@@ -107,168 +108,146 @@ class ServerlessComponent extends Component {
     }
   }
 
-  async deployApigw(credentials, inputs, regionList) {
+  async deployApigw(credentials, inputs) {
     if (inputs.isDisabled) {
       return {}
     }
 
-    const getServiceId = (instance, region) => {
-      const regionState = instance.state[region]
-      return inputs.serviceId || (regionState && regionState.serviceId)
-    }
+    const { region } = inputs
+    const { state } = this
 
-    const deployTasks = []
-    const outputs = {}
-    regionList.forEach((curRegion) => {
-      const apigwDeployer = async () => {
-        const apigw = new Apigw(credentials, curRegion)
+    const apigwDeployer = async () => {
+      const apigw = new Apigw(credentials, region)
 
-        const oldState = this.state[curRegion] || {}
-        const apigwInputs = {
-          ...inputs,
-          oldState: {
-            apiList: oldState.apiList || [],
-            customDomains: oldState.customDomains || []
-          }
-        }
-        // different region deployment has different service id
-        apigwInputs.serviceId = getServiceId(this, curRegion)
-        const apigwOutput = await apigw.deploy(deepClone(apigwInputs))
-        outputs[curRegion] = {
-          serviceId: apigwOutput.serviceId,
-          subDomain: apigwOutput.subDomain,
-          environment: apigwOutput.environment,
-          url: `${getDefaultProtocol(inputs.protocols) === 'https' ? 'wss' : 'ws'}://${
-            apigwOutput.subDomain
-          }/${apigwOutput.environment}${apigwInputs.endpoints[0].path}`,
-          wsBackUrl: apigwOutput.apiList[0].internalDomain
-        }
-
-        if (apigwOutput.customDomains) {
-          // TODO: need confirm add cns authentication
-          if (inputs.autoAddDnsRecord === true) {
-            // await this.tryToAddDnsRecord(credentials, apigwOutput.customDomains)
-          }
-          outputs[curRegion].customDomains = apigwOutput.customDomains
-        }
-        this.state[curRegion] = {
-          created: true,
-          ...(this.state[curRegion] ? this.state[curRegion] : {}),
-          ...outputs[curRegion],
-          apiList: apigwOutput.apiList
+      const oldState = state.apigw || {}
+      const apigwInputs = {
+        ...inputs,
+        oldState: {
+          apis: oldState.apis || [],
+          customDomains: oldState.customDomains || []
         }
       }
-      deployTasks.push(apigwDeployer())
-    })
+      // different region deployment has different service id
+      apigwInputs.serviceId = inputs.id || (state.apigw && state.apigw.id)
+      const apigwOutput = await apigw.deploy(deepClone(apigwInputs))
+      apigwOutput.apiList = apigwOutput.apiList.map((item) => {
+        item.created = true
+        return item
+      })
+      const outputs = {
+        url: `${getDefaultProtocol(apigwInputs.protocols) === 'https' ? 'wss' : 'ws'}://${
+          apigwOutput.subDomain
+        }/${apigwOutput.environment}${apigwInputs.endpoints[0].path}`,
+        id: apigwOutput.serviceId,
+        domain: apigwOutput.subDomain,
+        environment: apigwOutput.environment,
+        wsBackUrl: apigwOutput.apiList[0].internalDomain,
+        apis: apigwOutput.apiList
+      }
 
-    await Promise.all(deployTasks)
+      if (apigwOutput.customDomains) {
+        // TODO: need confirm add cns authentication
+        if (inputs.autoAddDnsRecord === true) {
+          // await this.tryToAddDnsRecord(credentials, apigwOutput.customDomains)
+        }
+        outputs.customDomains = apigwOutput.customDomains
+      }
+      return outputs
+    }
 
-    this.save()
-    return outputs
+    const apigwOutputs = await apigwDeployer()
+
+    this.state.apigw = apigwOutputs
+    await this.save()
+
+    return apigwOutputs
   }
 
-  async updateFaas(credentials, inputs, regionList, wsBackUrl) {
+  async updateFaas(credentials, inputs, wsBackUrl) {
     // after websocket api create, we should add wsBackUrl environment for cloud function
     console.log(`Start add wsBackUrl environment variable for function ${inputs.name}`)
     inputs.environment = inputs.environment || {}
     inputs.environment.variables.wsBackUrl = wsBackUrl
 
-    for (let i = 0; i < regionList.length; i++) {
-      const curRegion = regionList[i]
-      const scf = new Scf(credentials, curRegion)
-      await scf.updatefunctionConfigure(inputs)
-    }
+    const scf = new Scf(credentials, inputs.region)
+    await scf.updatefunctionConfigure(inputs)
 
     console.log(`Add wsBackUrl environment variable for function ${inputs.name} successfully`)
   }
 
   async deploy(inputs) {
-    console.log(`Deploying ${CONFIGS.compFullname} App...`)
+    this.initialize()
+    const { __TmpCredentials, CONFIGS } = this
 
-    const credentials = this.getCredentials()
+    console.log(`Deploying ${this.framework} Application`)
 
-    // 对Inputs内容进行标准化
-    const { regionList, faasConfig, apigwConfig } = await prepareInputs(this, credentials, inputs)
+    const { region, faasConfig, apigwConfig } = await prepareInputs(this, inputs)
 
-    // 部署函数 + API网关
-    const outputs = {}
+    const outputs = {
+      region
+    }
     if (!faasConfig.code.src) {
       outputs.templateUrl = CONFIGS.templateUrl
     }
 
-    const deployTasks = [this.deployFaas(credentials, faasConfig, regionList, outputs)]
-    // support apigwConfig.isDisabled
+    const deployTasks = [this.deployFaas(__TmpCredentials, faasConfig)]
+    // support apigw.isDisabled
     if (apigwConfig.isDisabled !== true) {
-      deployTasks.push(this.deployApigw(credentials, apigwConfig, regionList, outputs))
+      deployTasks.push(this.deployApigw(__TmpCredentials, apigwConfig))
     } else {
-      this.state.apigwDisabled = true
+      this.state.apigw.isDisabled = true
     }
     const [faasOutputs, apigwOutputs = {}] = await Promise.all(deployTasks)
-    const { wsBackUrl } = apigwOutputs[regionList[0]]
 
-    await this.updateFaas(credentials, faasConfig, regionList, wsBackUrl)
+    const { wsBackUrl } = apigwOutputs
 
-    // optimize outputs for one region
-    if (regionList.length === 1) {
-      const [oneRegion] = regionList
-      outputs.region = oneRegion
-      outputs['apigw'] = apigwOutputs[oneRegion]
-      outputs['faas'] = faasOutputs[oneRegion]
-    } else {
-      outputs['apigw'] = apigwOutputs
-      outputs['faas'] = faasOutputs
-    }
+    await this.updateFaas(__TmpCredentials, faasConfig, wsBackUrl)
 
-    this.state.region = regionList[0]
-    this.state.regionList = regionList
+    outputs['faas'] = faasOutputs
+    outputs['apigw'] = apigwOutputs
+
+    // this config for online debug
+    this.state.region = region
+    this.state.namespace = faasConfig.namespace
     this.state.lambdaArn = faasConfig.name
 
     return outputs
   }
 
   async remove() {
-    console.log(`Removing ${CONFIGS.compFullname} App...`)
+    this.initialize()
+    const { __TmpCredentials, framework } = this
+
+    console.log(`Removing ${framework} App`)
 
     const { state } = this
-    const { regionList = [] } = state
+    const { region } = state
 
-    const credentials = this.getCredentials()
-
-    const removeHandlers = []
-    for (let i = 0; i < regionList.length; i++) {
-      const curRegion = regionList[i]
-      const curState = state[curRegion]
-      const scf = new Scf(credentials, curRegion)
-      const apigw = new Apigw(credentials, curRegion)
-      const handler = async () => {
-        await scf.remove({
-          functionName: curState.name,
-          namespace: curState.namespace
-        })
-        // if disable apigw, no need to remove
-        if (state.apigwDisabled !== true) {
-          await apigw.remove({
-            created: curState.created,
-            environment: curState.environment,
-            serviceId: curState.serviceId,
-            apiList: curState.apiList,
-            customDomains: curState.customDomains
-          })
-        }
-      }
-      removeHandlers.push(handler())
-    }
-
-    await Promise.all(removeHandlers)
-
-    if (this.state.cns) {
-      const cns = new Cns(credentials)
-      for (let i = 0; i < this.state.cns.length; i++) {
-        await cns.remove({ deleteList: this.state.cns[i].records })
-      }
+    const { faas: faasState, apigw: apigwState } = state
+    const scf = new Scf(__TmpCredentials, region)
+    const apigw = new Apigw(__TmpCredentials, region)
+    await scf.remove({
+      functionName: faasState.name,
+      namespace: faasState.namespace
+    })
+    // if disable apigw, no need to remove
+    if (apigwState.isDisabled !== true && apigwState.id) {
+      apigwState.apis = apigwState.apis.map((item) => {
+        item.created = true
+        return item
+      })
+      await apigw.remove({
+        created: true,
+        serviceId: apigwState.id,
+        environment: apigwState.environment,
+        apiList: apigwState.apis || [],
+        customDomains: apigwState.customDomains
+      })
     }
 
     this.state = {}
+
+    return {}
   }
 }
 

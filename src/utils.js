@@ -3,7 +3,6 @@ const fs = require('fs')
 const { Cos } = require('tencent-component-toolkit')
 const download = require('download')
 const { TypeError } = require('tencent-component-toolkit/src/utils/error')
-const CONFIGS = require('./config')
 
 /*
  * Generates a random id
@@ -21,13 +20,6 @@ const getType = (obj) => {
   return Object.prototype.toString.call(obj).slice(8, -1)
 }
 
-const mergeJson = (sourceJson, targetJson) => {
-  Object.entries(sourceJson).forEach(([key, val]) => {
-    targetJson[key] = deepClone(val)
-  })
-  return targetJson
-}
-
 const capitalString = (str) => {
   if (str.length < 2) {
     return str.toUpperCase()
@@ -36,12 +28,16 @@ const capitalString = (str) => {
   return `${str[0].toUpperCase()}${str.slice(1)}`
 }
 
+const getTimestamp = () => {
+  return Math.floor(Date.now() / 1000)
+}
+
 const getDefaultProtocol = (protocols) => {
   return String(protocols).includes('https') ? 'https' : 'http'
 }
 
-const getDefaultFunctionName = () => {
-  return `${CONFIGS.compName}_component_${generateId()}`
+const getDefaultFunctionName = (framework) => {
+  return `${framework}-${generateId()}`
 }
 
 const getDefaultServiceName = () => {
@@ -52,23 +48,15 @@ const getDefaultServiceDescription = () => {
   return 'Created by Serverless Component'
 }
 
-const validateTraffic = (num) => {
-  if (getType(num) !== 'Number') {
-    throw new TypeError(
-      `PARAMETER_${CONFIGS.compName.toUpperCase()}_TRAFFIC`,
-      'traffic must be a number'
-    )
-  }
-  if (num < 0 || num > 1) {
-    throw new TypeError(
-      `PARAMETER_${CONFIGS.compName.toUpperCase()}_TRAFFIC`,
-      'traffic must be a number between 0 and 1'
-    )
-  }
-  return true
+const getDefaultBucketName = (region) => {
+  return `serverless-${region}-code`
 }
 
-const getDirFiles = async (dirPath) => {
+const getDefaultObjectName = (inputs) => {
+  return `${inputs.name}-${getTimestamp()}.zip`
+}
+
+const getDirFiles = (dirPath) => {
   const targetPath = path.resolve(dirPath)
   const files = fs.readdirSync(targetPath)
   const temp = {}
@@ -78,8 +66,22 @@ const getDirFiles = async (dirPath) => {
   return temp
 }
 
+const validateTraffic = (framework, num) => {
+  if (getType(num) !== 'Number') {
+    throw new TypeError(`PARAMETER_${framework.toUpperCase()}_TRAFFIC`, 'traffic must be a number')
+  }
+  if (num < 0 || num > 1) {
+    throw new TypeError(
+      `PARAMETER_${framework.toUpperCase()}_TRAFFIC`,
+      'traffic must be a number between 0 and 1'
+    )
+  }
+  return true
+}
+
 const getCodeZipPath = async (instance, inputs) => {
-  console.log(`Packaging ${CONFIGS.compFullname} application...`)
+  const { CONFIGS, framework } = instance
+  console.log(`Packaging ${framework} application`)
 
   // unzip source zip file
   let zipPath
@@ -88,7 +90,7 @@ const getCodeZipPath = async (instance, inputs) => {
     const downloadPath = `/tmp/${generateId()}`
     const filename = 'template'
 
-    console.log(`Installing Default ${CONFIGS.compFullname} App...`)
+    console.log(`Downloading default ${framework} application`)
     try {
       await download(CONFIGS.templateUrl, downloadPath, {
         filename: `${filename}.zip`
@@ -104,6 +106,16 @@ const getCodeZipPath = async (instance, inputs) => {
   return zipPath
 }
 
+// get files/dirs need to inject to project code
+const getInjection = () => {
+  let injectFiles = {}
+  const injectDirs = {}
+  const shimPath = path.join(__dirname, '_shims')
+  injectFiles = getDirFiles(shimPath)
+
+  return { injectFiles, injectDirs }
+}
+
 /**
  * Upload code to COS
  * @param {Component} instance serverless component instance
@@ -113,55 +125,42 @@ const getCodeZipPath = async (instance, inputs) => {
  * @param {string} region region
  */
 const uploadCodeToCos = async (instance, appId, credentials, inputs, region) => {
-  const bucketName = inputs.code.bucket || `sls-cloudfunction-${region}-code`
-  const objectName = inputs.code.object || `${inputs.name}-${Math.floor(Date.now() / 1000)}.zip`
-  // if set bucket and object not pack code
-  if (!inputs.code.bucket || !inputs.code.object) {
-    const zipPath = await getCodeZipPath(instance, inputs)
-    console.log(`Code zip path ${zipPath}`)
+  const { CONFIGS, framework } = instance
+  const bucketName = inputs.code.bucket || getDefaultBucketName(region)
+  const objectName = inputs.code.object || getDefaultObjectName(inputs)
+  const bucket = `${bucketName}-${appId}`
 
-    // save the zip path to state for lambda to use it
-    instance.state.zipPath = zipPath
+  const zipPath = await getCodeZipPath(instance, inputs)
+  console.log(`Code zip path ${zipPath}`)
 
-    const cos = new Cos(credentials, region)
+  // save the zip path to state for lambda to use it
+  instance.state.zipPath = zipPath
 
-    if (!inputs.code.bucket) {
-      // create default bucket
-      await cos.deploy({
-        bucket: bucketName + '-' + appId,
-        force: true,
-        lifecycle: [
-          {
-            status: 'Enabled',
-            id: 'deleteObject',
-            filter: '',
-            expiration: { days: '10' },
-            abortIncompleteMultipartUpload: { daysAfterInitiation: '10' }
-          }
-        ]
-      })
-    }
+  const cos = new Cos(credentials, region)
 
-    // upload code to cos
-    if (!inputs.code.object) {
-      console.log(`Getting cos upload url for bucket ${bucketName}`)
-      const uploadUrl = await cos.getObjectUrl({
-        bucket: bucketName + '-' + appId,
-        object: objectName,
-        method: 'PUT'
-      })
+  if (!inputs.code.bucket) {
+    // create default bucket
+    await cos.deploy({
+      force: true,
+      bucket: bucketName + '-' + appId,
+      lifecycle: CONFIGS.cos.lifecycle
+    })
+  }
+  if (!inputs.code.object) {
+    console.log(`Getting cos upload url for bucket ${bucketName}`)
+    const uploadUrl = await cos.getObjectUrl({
+      bucket: bucket,
+      object: objectName,
+      method: 'PUT'
+    })
 
-      // if shims and sls sdk entries had been injected to zipPath, no need to injected again
-      console.log(`Uploading code to bucket ${bucketName}`)
-      if (instance.codeInjected === true) {
-        await instance.uploadSourceZipToCOS(zipPath, uploadUrl, {}, {})
-      } else {
-        const shimFiles = await getDirFiles(path.join(__dirname, '_shims'))
-        await instance.uploadSourceZipToCOS(zipPath, uploadUrl, shimFiles, {})
-        instance.codeInjected = true
-      }
-      console.log(`Upload ${objectName} to bucket ${bucketName} success`)
-    }
+    // if shims and sls sdk entries had been injected to zipPath, no need to injected again
+    console.log(`Uploading code to bucket ${bucketName}`)
+
+    const { injectFiles, injectDirs } = getInjection(instance, framework)
+
+    await instance.uploadSourceZipToCOS(zipPath, uploadUrl, injectFiles, injectDirs)
+    console.log(`Upload ${objectName} to bucket ${bucketName} success`)
   }
 
   // save bucket state
@@ -174,53 +173,52 @@ const uploadCodeToCos = async (instance, appId, credentials, inputs, region) => 
   }
 }
 
-const prepareInputs = async (instance, credentials, inputs = {}) => {
-  // 对function inputs进行标准化
-  const tempFaasConfig = inputs.faas ? inputs.faas : {}
-  const fromClientRemark = `tencent-${CONFIGS.compName}`
-  const regionList = inputs.region
-    ? typeof inputs.region == 'string'
-      ? [inputs.region]
-      : inputs.region
-    : ['ap-guangzhou']
+const prepareInputs = async (instance, inputs = {}) => {
+  const { CONFIGS, framework, state } = instance
+  const fromClientRemark = `tencent-${framework}`
+  const region = inputs.region || CONFIGS.region
 
   // chenck state function name
-  const stageFaasName = instance.state[regionList[0]] && instance.state[regionList[0]].name
+  const stateFaasName = state.faas && state.faas.name
+
+  const tempFaasConfig = inputs.faas || {}
   const faasConfig = Object.assign(tempFaasConfig, {
+    fromClientRemark,
+    publish: inputs.publish, // get from command
+    traffic: inputs.traffic, // get from command
+    region: region,
     code: {
       src: inputs.src,
       bucket: inputs.srcOriginal && inputs.srcOriginal.bucket,
       object: inputs.srcOriginal && inputs.srcOriginal.object
     },
-    name: tempFaasConfig.name || stageFaasName || getDefaultFunctionName(),
-    region: regionList,
+    name: tempFaasConfig.name || stateFaasName || getDefaultFunctionName(),
     role: tempFaasConfig.role || '',
     handler: tempFaasConfig.handler || CONFIGS.handler,
     runtime: tempFaasConfig.runtime || CONFIGS.runtime,
     namespace: tempFaasConfig.namespace || CONFIGS.namespace,
     description: tempFaasConfig.description || CONFIGS.description,
-    fromClientRemark,
     layers: tempFaasConfig.layers || [],
     cfs: tempFaasConfig.cfs || [],
-    publish: inputs.publish,
-    traffic: inputs.traffic,
-    lastVersion: instance.state.lastVersion,
+    lastVersion: state.lastVersion,
     timeout: tempFaasConfig.timeout || CONFIGS.timeout,
     memorySize: tempFaasConfig.memorySize || CONFIGS.memorySize,
-    tags: tempFaasConfig.tags || null
+    tags: tempFaasConfig.tags
   })
 
   // validate traffic
   if (inputs.traffic !== undefined) {
-    validateTraffic(inputs.traffic)
+    validateTraffic(framework, inputs.traffic)
   }
   faasConfig.needSetTraffic = inputs.traffic !== undefined && faasConfig.lastVersion
 
+  const slsEntryFile = inputs.entryFile || CONFIGS.defaultEntryFile
+  instance.slsEntryFile = slsEntryFile
   if (tempFaasConfig.environment) {
     faasConfig.environment = tempFaasConfig.environment
     faasConfig.environment.variables = faasConfig.environment.variables || {}
     faasConfig.environment.variables.SERVERLESS = '1'
-    faasConfig.environment.variables.SLS_ENTRY_FILE = inputs.entryFile || CONFIGS.defaultEntryFile
+    faasConfig.environment.variables.SLS_ENTRY_FILE = slsEntryFile
   } else {
     faasConfig.environment = {
       variables: {
@@ -234,34 +232,36 @@ const prepareInputs = async (instance, credentials, inputs = {}) => {
     faasConfig.vpcConfig = tempFaasConfig.vpc
   }
 
-  // 对apigw inputs进行标准化
   const tempApigwConfig = inputs.apigw ? inputs.apigw : {}
   const apigwConfig = Object.assign(tempApigwConfig, {
-    serviceId: tempApigwConfig.serviceId,
-    region: regionList,
+    serviceId: tempApigwConfig.id,
+    region: region,
     isDisabled: tempApigwConfig.isDisabled === true,
     fromClientRemark: fromClientRemark,
-    serviceName: tempApigwConfig.serviceName || getDefaultServiceName(instance),
-    serviceDesc: tempApigwConfig.serviceDesc || getDefaultServiceDescription(instance),
+    serviceName: tempApigwConfig.name || getDefaultServiceName(instance),
+    serviceDesc: tempApigwConfig.description || getDefaultServiceDescription(instance),
     protocols: tempApigwConfig.protocols || ['http'],
-    environment: tempApigwConfig.environment ? tempApigwConfig.environment : 'release',
-    customDomains: tempApigwConfig.customDomains || []
+    environment: tempApigwConfig.environment || 'release',
+    api: tempApigwConfig.api || {
+      path: '/',
+      name: 'index'
+    },
+    function: tempApigwConfig.function || {}
   })
   if (!apigwConfig.endpoints) {
     apigwConfig.endpoints = [
       {
-        path: tempApigwConfig.path || '/',
-        enableCORS: tempApigwConfig.enableCORS,
-        serviceTimeout: tempApigwConfig.serviceTimeout,
+        path: tempApigwConfig.api.path || '/',
+        apiName: tempApigwConfig.api.name || 'index',
         method: 'GET',
-        apiName: tempApigwConfig.apiName || 'index',
+        enableCORS: tempApigwConfig.cors,
+        serviceTimeout: tempApigwConfig.timeout,
         protocol: 'WEBSOCKET',
         function: {
           isIntegratedResponse: false,
           functionName: faasConfig.name,
           functionNamespace: faasConfig.namespace,
-          functionQualifier:
-            (tempApigwConfig.function && tempApigwConfig.function.functionQualifier) || '$LATEST',
+          functionQualifier: tempApigwConfig.function.qualifier || '$DEFAULT',
           transportFunctionName: faasConfig.name,
           registerFunctionName: faasConfig.name,
           cleanupFunctionName: faasConfig.name
@@ -269,33 +269,22 @@ const prepareInputs = async (instance, credentials, inputs = {}) => {
       }
     ]
   }
-  if (tempApigwConfig.usagePlan) {
-    apigwConfig.endpoints[0].usagePlan = {
-      usagePlanId: tempApigwConfig.usagePlan.usagePlanId,
-      usagePlanName: tempApigwConfig.usagePlan.usagePlanName,
-      usagePlanDesc: tempApigwConfig.usagePlan.usagePlanDesc,
-      maxRequestNum: tempApigwConfig.usagePlan.maxRequestNum
-    }
-  }
-  if (tempApigwConfig.auth) {
-    apigwConfig.endpoints[0].auth = {
-      secretName: tempApigwConfig.auth.secretName,
-      secretIds: tempApigwConfig.auth.secretIds
-    }
-  }
 
-  regionList.forEach((curRegion) => {
-    const curRegionConf = inputs[curRegion]
-    if (curRegionConf && curRegionConf.faasConfig) {
-      faasConfig[curRegion] = curRegionConf.faasConfig
-    }
-    if (curRegionConf && curRegionConf.apigwConfig) {
-      apigwConfig[curRegion] = curRegionConf.apigwConfig
-    }
-  })
+  // using this transformation to simplize yaml config
+  if (tempApigwConfig.customDomains && tempApigwConfig.customDomains.length > 0) {
+    apigwConfig.customDomains = tempApigwConfig.customDomains.map((item) => {
+      return {
+        domain: item.domain,
+        certificateId: item.certId,
+        isDefaultMapping: !item.customMap,
+        pathMappingSet: item.pathMap,
+        protocols: item.protocols
+      }
+    })
+  }
 
   return {
-    regionList,
+    region,
     faasConfig,
     apigwConfig
   }
@@ -305,7 +294,6 @@ module.exports = {
   deepClone,
   generateId,
   uploadCodeToCos,
-  mergeJson,
   capitalString,
   getDefaultProtocol,
   prepareInputs

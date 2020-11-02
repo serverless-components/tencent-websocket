@@ -84,7 +84,7 @@ inputs:
     name: websocket-function
     timeout: 10
   apigw:
-    serviceTimeout: 30
+    timeout: 30
     environment: release
     protocols:
       - https
