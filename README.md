@@ -2,62 +2,53 @@
 
 # 腾讯云 Websocket Serverless Component
 
-## 简介
-
 腾讯云 Websocket Serverless Component。
 
-## 目录
+快速开始：
 
-1. [准备](#1-准备)
-2. [安装](#2-安装)
-3. [配置](#3-配置)
-4. [部署](#4-部署)
-5. [移除](#5-移除)
+1. [**安装**](#1-安装)
+2. [**创建**](#2-创建)
+3. [**部署**](#3-部署)
+4. [**配置**](#4-配置)
+5. [**开发调试**](#5-开发调试)
+6. [**查看状态**](#6-查看状态)
+7. [**移除**](#7-移除)
 
-### 1. 准备
+更多资源：
 
-#### 初始化 Websocket 项目
+- [**架构说明**](#架构说明)
+- [**账号配置**](#账号配置)
 
-创建 `Websocket` 入口文件 `app.js`，它包含了事件处理函数，每个事件函数会传入连个参数，第一个是客户后端发送的数据 `data` 字段，第二个是 `socket` 对象，示例如下：
+### 1. 安装
 
-```js
-// 当 socket 连接成功时触发
-on('connect', async (data, socket) => {
-  // id - socket 唯一标识的链接 ID，可以将它存储在数据库中，进行管理
-  const { id, event, send } = socket
-
-  return 200
-})
-
-// 当 socket 断开时触发
-on('disconnect', async (data, socket) => {
-  // 例如：你可以将链接 id 记录从数据库中删除
-})
-
-// 当客户端发送数据时触发
-on('message', async (data, socket) => {
-  // 发送数据到客户端，data 必须是字符串
-  await socket.send(data)
-})
-
-// 除以上事件的默认处理函数
-on('default', async (data, socket) => {
-  // 你可以发送数据到指定的链接
-  await socket.send(data)
-})
-```
-
-For a real world example of how the `app.js` file could be used, take a look at how the [chat app component is using it](https://github.com/serverless-components/chat-app/blob/master/backend/socket.js).
-
-### 2. 安装
-
-通过 npm 全局安装 [serverless cli](https://github.com/serverless/serverless)
+通过 npm 安装最新版本的 Serverless Framework
 
 ```bash
 $ npm install -g serverless
 ```
 
-### 3. 配置
+### 2. 创建
+
+```bash
+$ sls init websocket-starter --name example
+$ cd example
+```
+
+### 3. 部署
+
+在 `serverless.yml` 文件所在的项目根目录，运行以下指令进行部署：
+
+```bash
+$ serverless deploy
+```
+
+部署时需要进行身份验证，如您的账号未 [登陆](https://cloud.tencent.com/login) 或 [注册](https://cloud.tencent.com/register) 腾讯云，您可以直接通过 `微信` 扫描命令行中的二维码进行授权登陆和注册。
+
+> 注意: 如果希望查看更多部署过程的信息，可以通过`serverless deploy --debug` 命令查看部署过程中的实时日志信息。
+
+部署成功后，可以通过控制台输出的 `apigw.url` （类似 ws 开头的链接） 进行 websocket 连接。
+
+### 4. 配置
 
 在项目根目录，创建 `serverless.yml` 文件，在其中进行如下配置
 
@@ -90,27 +81,49 @@ inputs:
       - https
 ```
 
-- [更多配置](https://github.com/serverless-components/tencent-websocket/tree/master/docs/configure.md)
+点此查看[全量配置及配置说明](https://github.com/serverless-components/tencent-websocket/tree/master/docs/configure.md)
 
-### 4. 部署
+当你根据该配置文件更新配置字段后，再次运行 `serverless deploy` 或者 `serverless` 就可以更新配置到云端。
 
-如您的账号未 [登录](https://cloud.tencent.com/login) 或 [注册](https://cloud.tencent.com/register) 腾讯云，您可以直接通过 `微信` 扫描命令行中的二维码进行授权登陆和注册。
+### 5. 开发调试
 
-通过 `sls` 命令进行部署，并可以添加 `--debug` 参数查看部署过程中的信息
+部署了 websocket 应用后，可以通过开发调试能力对该项目进行二次开发，从而开发一个生产应用。在本地修改和更新代码后，不需要每次都运行 `serverless deploy` 命令来反复部署。你可以直接通过 `serverless dev` 命令对本地代码的改动进行检测和自动上传。
 
-```bash
-$ sls deploy --debug
+可以通过在 `serverless.yml`文件所在的目录下运行 `serverless dev` 命令开启开发调试能力。
+
+`serverless dev` 同时支持实时输出云端日志，每次部署完毕后，对项目进行访问，即可在命令行中实时输出调用日志，便于查看业务情况和排障。
+
+除了实时日志输出之外，针对 Node.js 应用，当前也支持云端调试能力。在开启 `serverless dev` 命令之后，将会自动监听远端端口，并将函数的超时时间临时配置为 900s。此时你可以通过访问 chrome://inspect/#devices 查找远端的调试路径，并直接对云端代码进行断点等调试。在调试模式结束后，需要再次部署从而将代码更新并将超时时间设置为原来的值。详情参考[开发模式和云端调试](https://cloud.tencent.com/document/product/1154/43220)。
+
+### 6. 查看状态
+
+在`serverless.yml`文件所在的目录下，通过如下命令查看部署状态：
+
+```
+$ serverless info
 ```
 
-### 5. 移除
+### 7. 移除
 
-通过以下命令移除部署的 API 网关
+在`serverless.yml`文件所在的目录下，通过以下命令移除部署的 Websocket 服务。移除后该组件会对应删除云上部署时所创建的所有相关资源。
 
-```bash
-$ sls remove --debug
+```
+$ serverless remove
 ```
 
-### 账号配置（可选）
+和部署类似，支持通过 `serverless remove --debug` 命令查看移除过程中的实时日志信息。
+
+## 架构说明
+
+Websocket 组件将在腾讯云账户中使用到如下 Serverless 服务：
+
+- [x] **API 网关** - API 网关将会接收外部请求并且转发到 SCF 云函数中。
+- [x] **SCF 云函数** - 云函数将承载 Websocket 应用。
+- [x] **CAM 访问控制** - 该组件会创建默认 CAM 角色用于授权访问关联资源。
+- [x] **COS 对象存储** - 为确保上传速度和质量，云函数压缩并上传代码时，会默认将代码包存储在特定命名的 COS 桶中。
+- [x] **SSL 证书服务** - 如果你在 yaml 文件中配置了 `apigw.customDomains` 字段，需要做自定义域名绑定并开启 HTTPS 时，也会用到证书管理服务和域名服务。Serverless Framework 会根据已经备案的域名自动申请并配置 SSL 证书。
+
+## 账号配置（可选）
 
 当前默认支持 CLI 扫描二维码登录，如您希望配置持久的环境变量/秘钥信息，也可以本地创建 `.env` 文件
 
@@ -125,10 +138,6 @@ $ sls remove --debug
 TENCENT_SECRET_ID=123
 TENCENT_SECRET_KEY=123
 ```
-
-## 更多组件
-
-可以在 [Serverless Components](https://github.com/serverless/components) repo 中查询更多组件的信息。
 
 ## License
 
