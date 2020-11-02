@@ -1,3 +1,10 @@
+## [0.3.4](https://github.com/serverless-components/tencent-websocket/compare/v0.3.3...v0.3.4) (2020-11-02)
+
+
+### Bug Fixes
+
+* optimize config ([0fdc055](https://github.com/serverless-components/tencent-websocket/commit/0fdc05559ec6cc38ddbbf76183e24c8ef82b9034))
+
 ## [0.3.3](https://github.com/serverless-components/tencent-websocket/compare/v0.3.2...v0.3.3) (2020-10-28)
 
 
