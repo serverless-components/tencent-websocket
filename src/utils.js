@@ -66,19 +66,6 @@ const getDirFiles = (dirPath) => {
   return temp
 }
 
-const validateTraffic = (framework, num) => {
-  if (getType(num) !== 'Number') {
-    throw new TypeError(`PARAMETER_${framework.toUpperCase()}_TRAFFIC`, 'traffic must be a number')
-  }
-  if (num < 0 || num > 1) {
-    throw new TypeError(
-      `PARAMETER_${framework.toUpperCase()}_TRAFFIC`,
-      'traffic must be a number between 0 and 1'
-    )
-  }
-  return true
-}
-
 const getCodeZipPath = async (instance, inputs) => {
   const { CONFIGS, framework } = instance
   console.log(`Packaging ${framework} application`)
@@ -173,9 +160,82 @@ const uploadCodeToCos = async (instance, appId, credentials, inputs, region) => 
   }
 }
 
-const prepareInputs = async (instance, inputs = {}) => {
-  const { CONFIGS, framework, state } = instance
-  const fromClientRemark = `tencent-${framework}`
+// compatible code for old configs
+// transfer yaml config to sdk inputs
+const yamlToSdkInputs = ({ instance, sourceInputs, faasConfig, apigwConfig }) => {
+  const { faas, apigw } = sourceInputs
+  // transfer faas config
+  if (faas.environments || faas.environment) {
+    // this is new config array to object
+    const environment = deepClone(faas.environments || faas.environment)
+    if (getType(environment) === 'Array') {
+      faasConfig.environment = {
+        variables: {
+          SERVERLESS: '1',
+          SLS_ENTRY_FILE: instance.slsEntryFile
+        }
+      }
+      environment.forEach((item) => {
+        faasConfig.environment.variables[item.envKey] = item.envVal
+      })
+    } else {
+      faasConfig.environment = {
+        variables: environment.variables || {}
+      }
+      faasConfig.environment.variables.SERVERLESS = '1'
+      faasConfig.environment.variables.SLS_ENTRY_FILE = instance.slsEntryFile
+    }
+  } else {
+    faasConfig.environment = {
+      variables: {
+        SERVERLESS: '1',
+        SLS_ENTRY_FILE: instance.slsEntryFile
+      }
+    }
+  }
+
+  if (faas.vpc || faas.vpcConfig) {
+    faasConfig.vpcConfig = faas.vpc || faas.vpcConfig
+  }
+
+  if (faas.tags) {
+    const tags = deepClone(faas.tags)
+    if (getType(tags) === 'Array') {
+      faasConfig.tags = {}
+      tags.forEach((item) => {
+        faasConfig.tags[item.tagKey] = item.tagVal
+      })
+    }
+  }
+
+  // transfer apigw config
+  apigwConfig.serviceId = apigwConfig.serviceId || apigw.serviceId
+  apigwConfig.serviceName =
+    apigwConfig.serviceName || apigw.serviceName || getDefaultServiceName(instance)
+  apigwConfig.serviceDesc =
+    apigwConfig.serviceDesc || apigw.serviceDesc || getDefaultServiceDescription(instance)
+
+  if (apigw.customDomains && apigw.customDomains.length > 0) {
+    apigwConfig.customDomains = apigw.customDomains.map((item) => {
+      if (item.certificateId) {
+        // old config, directly return
+        return item
+      }
+      return {
+        domain: item.domain,
+        certificateId: item.certId,
+        isDefaultMapping: !item.customMap,
+        pathMappingSet: item.pathMap,
+        protocols: item.protocols
+      }
+    })
+  }
+
+  return { faasConfig, apigwConfig }
+}
+
+const initializeInputs = async (instance, inputs = {}) => {
+  const { CONFIGS, state } = instance
   const region = inputs.region || CONFIGS.region
 
   // chenck state function name
@@ -183,9 +243,6 @@ const prepareInputs = async (instance, inputs = {}) => {
 
   const tempFaasConfig = inputs.faas || {}
   const faasConfig = Object.assign(tempFaasConfig, {
-    fromClientRemark,
-    publish: inputs.publish, // get from command
-    traffic: inputs.traffic, // get from command
     region: region,
     code: {
       src: inputs.src,
@@ -200,93 +257,46 @@ const prepareInputs = async (instance, inputs = {}) => {
     description: tempFaasConfig.description || CONFIGS.description,
     layers: tempFaasConfig.layers || [],
     cfs: tempFaasConfig.cfs || [],
-    lastVersion: state.lastVersion,
     timeout: tempFaasConfig.timeout || CONFIGS.timeout,
-    memorySize: tempFaasConfig.memorySize || CONFIGS.memorySize,
-    tags: tempFaasConfig.tags
+    memorySize: tempFaasConfig.memorySize || CONFIGS.memorySize
   })
-
-  // validate traffic
-  if (inputs.traffic !== undefined) {
-    validateTraffic(framework, inputs.traffic)
-  }
-  faasConfig.needSetTraffic = inputs.traffic !== undefined && faasConfig.lastVersion
 
   const slsEntryFile = inputs.entryFile || CONFIGS.defaultEntryFile
   instance.slsEntryFile = slsEntryFile
-  if (tempFaasConfig.environment) {
-    faasConfig.environment = tempFaasConfig.environment
-    faasConfig.environment.variables = faasConfig.environment.variables || {}
-    faasConfig.environment.variables.SERVERLESS = '1'
-    faasConfig.environment.variables.SLS_ENTRY_FILE = slsEntryFile
-  } else {
-    faasConfig.environment = {
-      variables: {
-        SERVERLESS: '1',
-        SLS_ENTRY_FILE: inputs.entryFile || CONFIGS.defaultEntryFile
-      }
-    }
-  }
-
-  if (tempFaasConfig.vpc) {
-    faasConfig.vpcConfig = tempFaasConfig.vpc
-  }
 
   const tempApigwConfig = inputs.apigw ? inputs.apigw : {}
   const apigwConfig = Object.assign(tempApigwConfig, {
-    serviceId: tempApigwConfig.id,
-    region: region,
+    region,
     isDisabled: tempApigwConfig.isDisabled === true,
-    fromClientRemark: fromClientRemark,
-    serviceName: tempApigwConfig.name || getDefaultServiceName(instance),
-    serviceDesc: tempApigwConfig.description || getDefaultServiceDescription(instance),
+    serviceId: tempApigwConfig.id || tempApigwConfig.serviceId,
+    serviceName: tempApigwConfig.name,
+    serviceDesc: tempApigwConfig.description,
     protocols: tempApigwConfig.protocols || ['http'],
     environment: tempApigwConfig.environment || 'release',
-    api: tempApigwConfig.api || {
-      path: '/',
-      name: 'index'
-    },
-    function: tempApigwConfig.function || {}
-  })
-  if (!apigwConfig.endpoints) {
-    apigwConfig.endpoints = [
+    endpoints: [
       {
-        path: tempApigwConfig.api.path || '/',
-        apiName: tempApigwConfig.api.name || 'index',
+        path: '/',
+        apiName: 'index',
         method: 'GET',
         enableCORS: tempApigwConfig.cors,
         serviceTimeout: tempApigwConfig.timeout,
         protocol: 'WEBSOCKET',
         function: {
           isIntegratedResponse: false,
+          functionQualifier: tempApigwConfig.qualifier || '$DEFAULT',
           functionName: faasConfig.name,
           functionNamespace: faasConfig.namespace,
-          functionQualifier: tempApigwConfig.function.qualifier || '$DEFAULT',
           transportFunctionName: faasConfig.name,
           registerFunctionName: faasConfig.name,
           cleanupFunctionName: faasConfig.name
         }
       }
     ]
-  }
-
-  // using this transformation to simplize yaml config
-  if (tempApigwConfig.customDomains && tempApigwConfig.customDomains.length > 0) {
-    apigwConfig.customDomains = tempApigwConfig.customDomains.map((item) => {
-      return {
-        domain: item.domain,
-        certificateId: item.certId,
-        isDefaultMapping: !item.customMap,
-        pathMappingSet: item.pathMap,
-        protocols: item.protocols
-      }
-    })
-  }
+  })
 
   return {
     region,
-    faasConfig,
-    apigwConfig
+    ...yamlToSdkInputs({ instance, sourceInputs: inputs, faasConfig, apigwConfig })
   }
 }
 
@@ -296,5 +306,5 @@ module.exports = {
   uploadCodeToCos,
   capitalString,
   getDefaultProtocol,
-  prepareInputs
+  initializeInputs
 }

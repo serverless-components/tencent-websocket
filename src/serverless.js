@@ -1,7 +1,7 @@
 const { Component } = require('@serverless/core')
 const { Scf, Apigw, Cns } = require('tencent-component-toolkit')
 const { TypeError } = require('tencent-component-toolkit/src/utils/error')
-const { uploadCodeToCos, getDefaultProtocol, prepareInputs, deepClone } = require('./utils')
+const { uploadCodeToCos, getDefaultProtocol, initializeInputs, deepClone } = require('./utils')
 const initConfigs = require('./config')
 
 class ServerlessComponent extends Component {
@@ -181,7 +181,7 @@ class ServerlessComponent extends Component {
 
     console.log(`Deploying ${this.framework} Application`)
 
-    const { region, faasConfig, apigwConfig } = await prepareInputs(this, inputs)
+    const { region, faasConfig, apigwConfig } = await initializeInputs(this, inputs)
 
     const outputs = {
       region
