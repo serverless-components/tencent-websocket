@@ -1,3 +1,10 @@
+## [0.3.5](https://github.com/serverless-components/tencent-websocket/compare/v0.3.4...v0.3.5) (2020-11-06)
+
+
+### Bug Fixes
+
+* use yamlToSdkInputs to transfer input for sdk ([9d07376](https://github.com/serverless-components/tencent-websocket/commit/9d073761c06bb882bcaf01c7a8cd8782d6f6d1ea))
+
 ## [0.3.4](https://github.com/serverless-components/tencent-websocket/compare/v0.3.3...v0.3.4) (2020-11-02)
 
 
