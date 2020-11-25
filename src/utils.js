@@ -16,10 +16,6 @@ const deepClone = (obj) => {
   return JSON.parse(JSON.stringify(obj))
 }
 
-const getType = (obj) => {
-  return Object.prototype.toString.call(obj).slice(8, -1)
-}
-
 const capitalString = (str) => {
   if (str.length < 2) {
     return str.toUpperCase()
@@ -162,29 +158,20 @@ const uploadCodeToCos = async (instance, appId, credentials, inputs, region) => 
 
 // compatible code for old configs
 // transfer yaml config to sdk inputs
-const yamlToSdkInputs = ({ instance, sourceInputs, faasConfig, apigwConfig }) => {
-  const { faas, apigw } = sourceInputs
+const yamlToSdkInputs = ({ instance, faasConfig, apigwConfig }) => {
   // transfer faas config
-  if (faas.environments || faas.environment) {
+  if (faasConfig.environments) {
     // this is new config array to object
-    const environment = deepClone(faas.environments || faas.environment)
-    if (getType(environment) === 'Array') {
-      faasConfig.environment = {
-        variables: {
-          SERVERLESS: '1',
-          SLS_ENTRY_FILE: instance.slsEntryFile
-        }
+    const environment = deepClone(faasConfig.environments)
+    faasConfig.environment = {
+      variables: {
+        SERVERLESS: '1',
+        SLS_ENTRY_FILE: instance.slsEntryFile
       }
-      environment.forEach((item) => {
-        faasConfig.environment.variables[item.envKey] = item.envVal
-      })
-    } else {
-      faasConfig.environment = {
-        variables: environment.variables || {}
-      }
-      faasConfig.environment.variables.SERVERLESS = '1'
-      faasConfig.environment.variables.SLS_ENTRY_FILE = instance.slsEntryFile
     }
+    environment.forEach((item) => {
+      faasConfig.environment.variables[item.key] = item.value
+    })
   } else {
     faasConfig.environment = {
       variables: {
@@ -194,33 +181,25 @@ const yamlToSdkInputs = ({ instance, sourceInputs, faasConfig, apigwConfig }) =>
     }
   }
 
-  if (faas.vpc || faas.vpcConfig) {
-    faasConfig.vpcConfig = faas.vpc || faas.vpcConfig
+  if (faasConfig.vpc) {
+    faasConfig.vpcConfig = faasConfig.vpc
   }
 
-  if (faas.tags) {
-    const tags = deepClone(faas.tags)
-    if (getType(tags) === 'Array') {
-      faasConfig.tags = {}
-      tags.forEach((item) => {
-        faasConfig.tags[item.tagKey] = item.tagVal
-      })
-    }
+  if (faasConfig.tags) {
+    const tags = deepClone(faasConfig.tags)
+    faasConfig.tags = {}
+    tags.forEach((item) => {
+      faasConfig.tags[item.key] = item.value
+    })
   }
 
   // transfer apigw config
-  apigwConfig.serviceId = apigwConfig.serviceId || apigw.serviceId
-  apigwConfig.serviceName =
-    apigwConfig.serviceName || apigw.serviceName || getDefaultServiceName(instance)
-  apigwConfig.serviceDesc =
-    apigwConfig.serviceDesc || apigw.serviceDesc || getDefaultServiceDescription(instance)
+  apigwConfig.serviceId = apigwConfig.id
+  apigwConfig.serviceName = apigwConfig.name || getDefaultServiceName(instance)
+  apigwConfig.serviceDesc = apigwConfig.description || getDefaultServiceDescription(instance)
 
-  if (apigw.customDomains && apigw.customDomains.length > 0) {
-    apigwConfig.customDomains = apigw.customDomains.map((item) => {
-      if (item.certificateId) {
-        // old config, directly return
-        return item
-      }
+  if (apigwConfig.customDomains && apigwConfig.customDomains.length > 0) {
+    apigwConfig.customDomains = apigwConfig.customDomains.map((item) => {
       return {
         domain: item.domain,
         certificateId: item.certId,
@@ -245,7 +224,7 @@ const initializeInputs = async (instance, inputs = {}) => {
   const faasConfig = Object.assign(tempFaasConfig, {
     region: region,
     code: {
-      src: inputs.src,
+      src: inputs.src.src,
       bucket: inputs.srcOriginal && inputs.srcOriginal.bucket,
       object: inputs.srcOriginal && inputs.srcOriginal.object
     },
@@ -264,13 +243,10 @@ const initializeInputs = async (instance, inputs = {}) => {
   const slsEntryFile = inputs.entryFile || CONFIGS.defaultEntryFile
   instance.slsEntryFile = slsEntryFile
 
-  const tempApigwConfig = inputs.apigw ? inputs.apigw : {}
+  const tempApigwConfig = inputs.apigw || {}
   const apigwConfig = Object.assign(tempApigwConfig, {
     region,
     isDisabled: tempApigwConfig.isDisabled === true,
-    serviceId: tempApigwConfig.id || tempApigwConfig.serviceId,
-    serviceName: tempApigwConfig.name,
-    serviceDesc: tempApigwConfig.description,
     protocols: tempApigwConfig.protocols || ['http'],
     environment: tempApigwConfig.environment || 'release',
     endpoints: [

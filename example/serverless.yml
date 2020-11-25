@@ -13,12 +13,6 @@ inputs:
   faas:
     name: websocket-function
     timeout: 10
-    environment:
-      - envKey: TEST
-        envVal: 123
-    tags:
-      - tagKey: TEST
-        tagVal: 123
   apigw:
     timeout: 30
     environment: release

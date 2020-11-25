@@ -1,6 +1,8 @@
-require('dotenv').config()
-const { generateId, getServerlessSdk } = require('./utils')
 const path = require('path')
+require('dotenv').config({
+  path: path.join(__dirname, '..', '.env.test')
+})
+const { generateId, getServerlessSdk } = require('./utils')
 
 // set enough timeout for deployment to finish
 jest.setTimeout(300000)
@@ -9,7 +11,7 @@ jest.setTimeout(300000)
 const instanceYaml = {
   org: 'orgDemo',
   app: 'appDemo',
-  component: 'websocket',
+  component: 'websocket@dev',
   name: `websocket-integration-tests-${generateId()}`,
   stage: 'dev',
   inputs: {
@@ -33,7 +35,7 @@ const credentials = {
 // get serverless construct sdk
 const sdk = getServerlessSdk(instanceYaml.org)
 
-it('should successfully deploy websocket app', async () => {
+it('should deploy success', async () => {
   const instance = await sdk.deploy(instanceYaml, credentials)
 
   expect(instance).toBeDefined()
@@ -47,7 +49,7 @@ it('should successfully deploy websocket app', async () => {
   expect(instance.outputs.faas.runtime).toEqual(instanceYaml.inputs.faas.runtime)
 })
 
-it('should successfully remove websocket app', async () => {
+it('should remove success', async () => {
   await sdk.remove(instanceYaml, credentials)
   result = await sdk.getInstance(instanceYaml.org, instanceYaml.stage, instanceYaml.app, instanceYaml.name)
 

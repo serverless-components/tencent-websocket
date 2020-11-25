@@ -1,6 +1,7 @@
 const { Component } = require('@serverless/core')
 const { Scf, Apigw, Cns } = require('tencent-component-toolkit')
 const { TypeError } = require('tencent-component-toolkit/src/utils/error')
+const { migrateFramework } = require('@slsplus/migrate')
 const { uploadCodeToCos, getDefaultProtocol, initializeInputs, deepClone } = require('./utils')
 const initConfigs = require('./config')
 
@@ -176,6 +177,8 @@ class ServerlessComponent extends Component {
   }
 
   async deploy(inputs) {
+    inputs = migrateFramework(inputs)
+
     this.initialize()
     const { __TmpCredentials, CONFIGS } = this
 
@@ -223,26 +226,47 @@ class ServerlessComponent extends Component {
     const { state } = this
     const { region } = state
 
-    const { faas: faasState, apigw: apigwState } = state
+    let { faas: faasState, apigw: apigwState } = state
+    if (!faasState) {
+      const curState = state[region]
+      faasState = {
+        name: curState.name,
+        namespace: curState.namespace
+      }
+    }
+    if (!apigwState) {
+      const curState = state[region]
+      apigwState = {
+        id: curState.serviceId,
+        environment: curState.environment,
+        apis: curState.apiList,
+        customDomains: curState.customDomains
+      }
+    }
     const scf = new Scf(__TmpCredentials, region)
     const apigw = new Apigw(__TmpCredentials, region)
-    await scf.remove({
-      functionName: faasState.name,
-      namespace: faasState.namespace
-    })
-    // if disable apigw, no need to remove
-    if (apigwState.isDisabled !== true && apigwState.id) {
-      apigwState.apis = apigwState.apis.map((item) => {
-        item.created = true
-        return item
+    try {
+      await scf.remove({
+        functionName: faasState.name,
+        namespace: faasState.namespace
       })
-      await apigw.remove({
-        created: true,
-        serviceId: apigwState.id,
-        environment: apigwState.environment,
-        apiList: apigwState.apis || [],
-        customDomains: apigwState.customDomains
-      })
+      // if disable apigw, no need to remove
+      const serviceId = apigwState.id || apigwState.serviceId
+      if (apigwState.isDisabled !== true && serviceId) {
+        apigwState.apis = apigwState.apis.map((item) => {
+          item.created = true
+          return item
+        })
+        await apigw.remove({
+          created: true,
+          serviceId: serviceId,
+          environment: apigwState.environment,
+          apiList: apigwState.apis || apigwState.apiList || [],
+          customDomains: apigwState.customDomains
+        })
+      }
+    } catch (e) {
+      console.log(e)
     }
 
     this.state = {}
