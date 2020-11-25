@@ -219,6 +219,7 @@ const initializeInputs = async (instance, inputs = {}) => {
 
   // chenck state function name
   const stateFaasName = state.faas && state.faas.name
+  const stateApigwId = state.apigw && (state.apigw.id || state.apigw.serviceId)
 
   const tempFaasConfig = inputs.faas || {}
   const faasConfig = Object.assign(tempFaasConfig, {
@@ -246,6 +247,7 @@ const initializeInputs = async (instance, inputs = {}) => {
   const tempApigwConfig = inputs.apigw || {}
   const apigwConfig = Object.assign(tempApigwConfig, {
     region,
+    id: tempApigwConfig.id || stateApigwId,
     isDisabled: tempApigwConfig.isDisabled === true,
     protocols: tempApigwConfig.protocols || ['http'],
     environment: tempApigwConfig.environment || 'release',
