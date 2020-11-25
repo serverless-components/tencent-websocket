@@ -1,3 +1,10 @@
+# [0.4.0](https://github.com/serverless-components/tencent-websocket/compare/v0.3.5...v0.4.0) (2020-11-25)
+
+
+### Features
+
+* uniform configure ([#13](https://github.com/serverless-components/tencent-websocket/issues/13)) ([70f438a](https://github.com/serverless-components/tencent-websocket/commit/70f438ac54f104baf68930b38f3ac44ca21db6b9))
+
 ## [0.3.5](https://github.com/serverless-components/tencent-websocket/compare/v0.3.4...v0.3.5) (2020-11-06)
 
 
