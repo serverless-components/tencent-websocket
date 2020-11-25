@@ -272,7 +272,7 @@ const initializeInputs = async (instance, inputs = {}) => {
 
   return {
     region,
-    ...yamlToSdkInputs({ instance, sourceInputs: inputs, faasConfig, apigwConfig })
+    ...yamlToSdkInputs({ instance, faasConfig, apigwConfig })
   }
 }
 
