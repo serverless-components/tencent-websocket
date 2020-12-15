@@ -1,3 +1,10 @@
+## [0.4.1](https://github.com/serverless-components/tencent-websocket/compare/v0.4.0...v0.4.1) (2020-12-15)
+
+
+### Bug Fixes
+
+* update deploy and remove flow ([#14](https://github.com/serverless-components/tencent-websocket/issues/14)) ([613200b](https://github.com/serverless-components/tencent-websocket/commit/613200be6fff00b90c87f2d97d1452e5f8b5582a))
+
 # [0.4.0](https://github.com/serverless-components/tencent-websocket/compare/v0.3.5...v0.4.0) (2020-11-25)
 
 
