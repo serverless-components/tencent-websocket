@@ -193,14 +193,14 @@ class ServerlessComponent extends Component {
       outputs.templateUrl = CONFIGS.templateUrl
     }
 
-    const deployTasks = [this.deployFaas(__TmpCredentials, faasConfig)]
+    const faasOutputs = await this.deployFaas(__TmpCredentials, faasConfig)
+    let apigwOutputs
     // support apigw.isDisabled
     if (apigwConfig.isDisabled !== true) {
-      deployTasks.push(this.deployApigw(__TmpCredentials, apigwConfig))
+      apigwOutputs = await this.deployApigw(__TmpCredentials, apigwConfig)
     } else {
       this.state.apigw.isDisabled = true
     }
-    const [faasOutputs, apigwOutputs = {}] = await Promise.all(deployTasks)
 
     const { wsBackUrl } = apigwOutputs
 
@@ -246,10 +246,6 @@ class ServerlessComponent extends Component {
     const scf = new Scf(__TmpCredentials, region)
     const apigw = new Apigw(__TmpCredentials, region)
     try {
-      await scf.remove({
-        functionName: faasState.name,
-        namespace: faasState.namespace
-      })
       // if disable apigw, no need to remove
       const serviceId = apigwState.id || apigwState.serviceId
       if (apigwState.isDisabled !== true && serviceId) {
@@ -265,6 +261,11 @@ class ServerlessComponent extends Component {
           customDomains: apigwState.customDomains
         })
       }
+
+      await scf.remove({
+        functionName: faasState.name,
+        namespace: faasState.namespace
+      })
     } catch (e) {
       console.log(e)
     }
