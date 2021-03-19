@@ -1,3 +1,10 @@
+# [0.5.0](https://github.com/serverless-components/tencent-websocket/compare/v0.4.1...v0.5.0) (2021-03-19)
+
+
+### Features
+
+* optimize deploy flow and update deps ([#16](https://github.com/serverless-components/tencent-websocket/issues/16)) ([8b74d8c](https://github.com/serverless-components/tencent-websocket/commit/8b74d8cb267b0ef23e3f3f1f071bfd4fc82978a2))
+
 ## [0.4.1](https://github.com/serverless-components/tencent-websocket/compare/v0.4.0...v0.4.1) (2020-12-15)
 
 
