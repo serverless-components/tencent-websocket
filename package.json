@@ -43,7 +43,7 @@
     "@semantic-release/commit-analyzer": "^8.0.1",
     "@semantic-release/git": "^9.0.0",
     "@semantic-release/release-notes-generator": "^9.0.1",
-    "@serverless/platform-client-china": "^2.0.7",
+    "@serverless/platform-client-china": "^2.1.9",
     "@ygkit/secure": "^0.0.3",
     "babel-eslint": "^10.1.0",
     "dotenv": "^8.2.0",
