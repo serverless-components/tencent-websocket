@@ -1,5 +1,5 @@
 name: websocket
-version: 0.4.1
+version: 0.5.0
 author: Tencent Cloud, Inc.
 org: Tencent Cloud, Inc.
 description: Deploys websocket service on Tencent Cloud.

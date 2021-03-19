@@ -2,7 +2,7 @@ const path = require('path')
 const fs = require('fs')
 const { Cos } = require('tencent-component-toolkit')
 const download = require('download')
-const { TypeError } = require('tencent-component-toolkit/src/utils/error')
+const { ApiTypeError } = require('tencent-component-toolkit/lib/utils/error')
 
 /*
  * Generates a random id
@@ -79,7 +79,7 @@ const getCodeZipPath = async (instance, inputs) => {
         filename: `${filename}.zip`
       })
     } catch (e) {
-      throw new TypeError(`DOWNLOAD_TEMPLATE`, 'Download default template failed.')
+      throw new ApiTypeError(`DOWNLOAD_TEMPLATE`, 'Download default template failed.')
     }
     zipPath = `${downloadPath}/${filename}.zip`
   } else {

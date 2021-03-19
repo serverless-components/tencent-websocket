@@ -1,6 +1,6 @@
 const { Component } = require('@serverless/core')
-const { Scf, Apigw, Cns } = require('tencent-component-toolkit')
-const { TypeError } = require('tencent-component-toolkit/src/utils/error')
+const { Scf, Apigw } = require('tencent-component-toolkit')
+const { ApiTypeError } = require('tencent-component-toolkit/lib/utils/error')
 const { migrateFramework } = require('@slsplus/migrate')
 const { uploadCodeToCos, getDefaultProtocol, initializeInputs, deepClone } = require('./utils')
 const initConfigs = require('./config')
@@ -10,7 +10,7 @@ class ServerlessComponent extends Component {
     const { tmpSecrets } = this.credentials.tencent
 
     if (!tmpSecrets || !tmpSecrets.TmpSecretId) {
-      throw new TypeError(
+      throw new ApiTypeError(
         'CREDENTIAL',
         'Cannot get secretId/Key, your account could be sub-account and does not have the access to use SLS_QcsRole, please make sure the role exists first, then visit https://cloud.tencent.com/document/product/1154/43006, follow the instructions to bind the role to your account.'
       )
@@ -81,34 +81,6 @@ class ServerlessComponent extends Component {
     return faasOutputs
   }
 
-  // try to add dns record
-  async tryToAddDnsRecord(credentials, customDomains) {
-    try {
-      const cns = new Cns(credentials)
-      for (let i = 0; i < customDomains.length; i++) {
-        const item = customDomains[i]
-        if (item.domainPrefix) {
-          await cns.deploy({
-            domain: item.subDomain.replace(`${item.domainPrefix}.`, ''),
-            records: [
-              {
-                subDomain: item.domainPrefix,
-                recordType: 'CNAME',
-                recordLine: '默认',
-                value: item.cname,
-                ttl: 600,
-                mx: 10,
-                status: 'enable'
-              }
-            ]
-          })
-        }
-      }
-    } catch (e) {
-      console.log('METHOD_tryToAddDnsRecord', e.message)
-    }
-  }
-
   async deployApigw(credentials, inputs) {
     if (inputs.isDisabled) {
       return {}
@@ -147,10 +119,6 @@ class ServerlessComponent extends Component {
       }
 
       if (apigwOutput.customDomains) {
-        // TODO: need confirm add cns authentication
-        if (inputs.autoAddDnsRecord === true) {
-          // await this.tryToAddDnsRecord(credentials, apigwOutput.customDomains)
-        }
         outputs.customDomains = apigwOutput.customDomains
       }
       return outputs
@@ -171,7 +139,7 @@ class ServerlessComponent extends Component {
     inputs.environment.variables.wsBackUrl = wsBackUrl
 
     const scf = new Scf(credentials, inputs.region)
-    await scf.updatefunctionConfigure(inputs)
+    await scf.scf.updateConfigure(inputs)
 
     console.log(`Add wsBackUrl environment variable for function ${inputs.name} successfully`)
   }
