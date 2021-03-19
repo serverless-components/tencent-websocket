@@ -12,9 +12,10 @@ const generateId = () =>
  * Initializes and returns an instance of the serverless sdk
  * @param ${string} orgName - the serverless org name.
  */
-const getServerlessSdk = (orgName) => {
+const getServerlessSdk = (orgName, orgUid) => {
   const sdk = new ServerlessSDK({
     context: {
+      orgUid,
       orgName
     }
   })

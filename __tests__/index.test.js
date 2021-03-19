@@ -30,7 +30,7 @@ const credentials = {
 }
 
 // get serverless construct sdk
-const sdk = getServerlessSdk(instanceYaml.org)
+const sdk = getServerlessSdk(instanceYaml.org, process.env.TENCENT_APP_ID)
 
 it('should deploy success', async () => {
   const instance = await sdk.deploy(instanceYaml, credentials)
