@@ -2,7 +2,7 @@ name: websocket
 version: 0.5.0
 author: Tencent Cloud, Inc.
 org: Tencent Cloud, Inc.
-description: Deploys websocket service on Tencent Cloud.
+description: WebSocket 组件，允许用户开发部署基于 Socket 的函数应用。
 keywords: tencent, serverless, websocket
 repo: https://github.com/serverless-components/tencent-websocket
 readme: https://github.com/serverless-components/tencent-websocket/tree/master/README.md
