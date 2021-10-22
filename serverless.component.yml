@@ -1,5 +1,5 @@
 name: websocket
-version: 0.5.1
+version: 0.5.2
 author: Tencent Cloud, Inc.
 org: Tencent Cloud, Inc.
 description: WebSocket 组件，允许用户开发部署基于 Socket 的函数应用。
